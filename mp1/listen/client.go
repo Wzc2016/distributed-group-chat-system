@@ -3,14 +3,14 @@ package main
 import (
 "fmt"
 "os"
-"strings"
+// "strings"
 )
 
 func main() {
 	checkArg()
     name := os.Args[1]
     port := os.Args[2]
-    numMem := os.Args[3]
+    // numMem := os.Args[3]
 
     messageChan := make(chan []string)
 
@@ -25,7 +25,7 @@ func main() {
     handleMsgAll(targets, name, messageChan)
 
     for i := 0; i < len(targets); i ++ {
-    	message := <-messageChan
+    	// message := <-messageChan
     	//TODO
     }
 }

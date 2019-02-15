@@ -6,7 +6,7 @@ import (
 "os/exec"
 "net"
 "fmt"
-"cmd"
+// "cmd"
 "bytes"
 )
 
@@ -32,7 +32,7 @@ func getdns(vm string) []byte{
 	cmd := exec.Command("/usr/bin/dig","+short", vm)
 	resultsBytes, err := cmd.CombinedOutput()
 	resultsBytes = bytes.Trim(resultsBytes, "\n")
-	errorHandler(err,"Couldn't lookup machine address:" + vm, true )
+	errHandler(err,"Couldn't lookup machine address:" + vm, true )
 	return resultsBytes
 }
 
@@ -51,7 +51,7 @@ func handleMsg(target string, name string, msgChan chan []string) {
 			errHandler(err, "Can not connect to the server: " + target, false)
 			// no err
 			if err != nil {
-				msgChan <- append(name, "has left")
+				msgChan <- append(results, "has left")
 				return
 			}
 
