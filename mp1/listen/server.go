@@ -5,7 +5,7 @@ import(
     "os"  
     "net"
     "bufio"
-    // "strings"
+    "strings"
 )
 
 func main(){
@@ -21,13 +21,14 @@ func main(){
         go func(conn net.Conn) {
             defer conn.Close()
             input := bufio.NewReader(conn)
-            // output := bufio.NewWriter(conn)
+            output := bufio.NewWriter(conn)
             pattern, err := input.ReadString('\n')
             errHandler(err, "Fail to read string!", false)
             pattern = pattern[:len(pattern) - 1]
             fmt.Println("Pattern:" + pattern)
-            // s := strings.Split(pattern, ":")
-            // message := s[1]
+            s := strings.Split(pattern, ":")
+            message := s[1]
+            fmt.Println("Text:" + message)
         } (conn)
     }
 }
