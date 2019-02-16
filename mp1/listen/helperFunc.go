@@ -45,9 +45,11 @@ func handleMsgAll(targets []string, name string, msgChan chan []string) {
 // TODO add timestamps
 func handleMsg(target string, name string, msgChan chan []string) {
 		go func() {
+			// fmt.Println("hi")
 			results := make([]string, 1)
 			results[0] = name
 			conn, err := net.Dial("tcp", target)
+
 			errHandler(err, "Can not connect to the server: " + target, false)
 			// no err
 			if err != nil {

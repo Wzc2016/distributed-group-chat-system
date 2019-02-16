@@ -20,12 +20,22 @@ func main() {
     	result := getdns(host)
     	targets[i] = string(result) + ":" + port
     	fmt.Println("Added " + host + "(" + targets[i] + ") to list of machines.")
+
     }
 
     handleMsgAll(targets, name, messageChan)
 
     for i := 0; i < len(targets); i ++ {
     	// message := <-messageChan
+    	// fmt.Scanln()
     	//TODO
+    	message := <-messageChan
+		//TODO Add log file name logic (Currently hardcoded to 0)
+		fmt.Println(fmt.Sprintf("\n\nTarget: (%s)\nLog File Name:machine.%d.log\nResponse:",message[0], 0))
+		fmt.Println("---------------------------------------------------------------")
+		for _, msg := range message[1:] {
+			fmt.Println(msg)
+		}
+		fmt.Println(fmt.Sprintf("Lines Found: %d\n\n", len(message) - 1))
     }
 }
