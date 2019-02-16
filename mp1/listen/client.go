@@ -4,6 +4,7 @@ import (
 "fmt"
 "os"
 // "strings"
+"net"
 )
 
 func main() {
@@ -19,23 +20,31 @@ func main() {
     for i, host := range hosts {
     	result := getdns(host)
     	targets[i] = string(result) + ":" + port
-    	fmt.Println("Added " + host + "(" + targets[i] + ") to list of machines.")
-
+    	// fmt.Println("Added " + host + "(" + targets[i] + ") to list of machines.")
     }
+    go handleMsgAll(targets, name, messageChan)
 
-    handleMsgAll(targets, name, messageChan)
+    suc := <-messageChan
+    // fmt.Println(suc[1])
+    conn, err := net.Dial("tcp", suc[1])
 
-    for i := 0; i < len(targets); i ++ {
-    	// message := <-messageChan
-    	// fmt.Scanln()
-    	//TODO
-    	message := <-messageChan
-		//TODO Add log file name logic (Currently hardcoded to 0)
-		fmt.Println(fmt.Sprintf("\n\nTarget: (%s)\nLog File Name:machine.%d.log\nResponse:",message[0], 0))
-		fmt.Println("---------------------------------------------------------------")
-		for _, msg := range message[1:] {
-			fmt.Println(msg)
-		}
-		fmt.Println(fmt.Sprintf("Lines Found: %d\n\n", len(message) - 1))
-    }
+	errHandler(err, "无法连接到: " + suc[1], false)
+	// no err
+
+	if err != nil {
+		fmt.Println("服务没打开")
+		os.Exit(1)
+	}
+	// defer conn.Close()
+	for {
+		var msg string
+		fmt.Scan(&msg)
+		fmt.Print("<" + name + ">" + "说:")
+		fmt.Println(msg)
+		b := []byte("<" + name + ">" + "说：" + msg)
+		conn.Write(b)
+	}
+
+    va := <-messageChan
+    fmt.Println(va[0])
 }

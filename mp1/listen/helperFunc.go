@@ -1,7 +1,7 @@
 package main
 
 import (
-"bufio"
+// "bufio"
 "os"
 "os/exec"
 "net"
@@ -9,6 +9,9 @@ import (
 // "cmd"
 "bytes"
 )
+
+var nameMap = make([]string)
+var text string
 
 // check the number of args
 func checkArg() {
@@ -37,9 +40,12 @@ func getdns(vm string) []byte{
 }
 
 func handleMsgAll(targets []string, name string, msgChan chan []string) {
-	for _, target := range targets {
-		handleMsg(target, name, msgChan)
+	for {
+		for _, target := range targets {
+			handleMsg(target, name, msgChan)
+		}
 	}
+
 }
 
 // TODO add timestamps
@@ -50,20 +56,17 @@ func handleMsg(target string, name string, msgChan chan []string) {
 			results[0] = name
 			conn, err := net.Dial("tcp", target)
 
-			errHandler(err, "Can not connect to the server: " + target, false)
 			// no err
 			if err != nil {
-				msgChan <- append(results, "has left")
+				if()
 				return
 			}
 
-			fmt.Fprintf(conn, name + ":")
-			scanner := bufio.NewScanner(conn)
-			for scanner.Scan() {
-				results = append(results, scanner.Text())
-			}
-			err = scanner.Err()
-			errHandler(err, "Can not read server response!", true)
-			msgChan <- results
+			defer conn.Close()
+			// fmt.Println(name + "进入聊天室")
+			msgChan <- append(results, target)
+			// b := []byte(target + "连接成功")
+			return
+			
 		}()
 }
