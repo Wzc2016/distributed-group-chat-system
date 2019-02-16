@@ -4,8 +4,8 @@ import(
     "fmt"  
     "os"  
     "net"
-    "bufio"
-    "strings"
+    // "bufio"
+    // "strings"
 )
 
 func main(){
@@ -15,20 +15,20 @@ func main(){
     // numMem := os.Args[3]
     server, err := net.Listen("tcp", ":" + port)
     errHandler(err, "Can not start server!", true)
+    
     for {
         conn, err := server.Accept()
         errHandler(err, "Can not open connection!", true)
         go func(conn net.Conn) {
             defer conn.Close()
-            input := bufio.NewReader(conn)
-            output := bufio.NewWriter(conn)
-            pattern, err := input.ReadString('\n')
-            errHandler(err, "Fail to read string!", false)
-            pattern = pattern[:len(pattern) - 1]
-            fmt.Println("Pattern:" + pattern)
-            s := strings.Split(pattern, ":")
-            message := s[1]
-            fmt.Println("Text:" + message)
+            for {
+                buff := make([]byte, 256)
+                length, err := conn.Read(buff)
+                if err != nil {
+                    break
+                }
+                fmt.Println(string(buff[:length]))
+            }
         } (conn)
     }
 }
