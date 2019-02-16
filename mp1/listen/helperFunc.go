@@ -10,7 +10,7 @@ import (
 "bytes"
 )
 
-var nameMap = make([]string)
+// var nameMap = make([]string)
 var text string
 
 // check the number of args
@@ -40,10 +40,8 @@ func getdns(vm string) []byte{
 }
 
 func handleMsgAll(targets []string, name string, msgChan chan []string) {
-	for {
 		for _, target := range targets {
 			handleMsg(target, name, msgChan)
-		}
 	}
 
 }
@@ -58,7 +56,6 @@ func handleMsg(target string, name string, msgChan chan []string) {
 
 			// no err
 			if err != nil {
-				if()
 				return
 			}
 
