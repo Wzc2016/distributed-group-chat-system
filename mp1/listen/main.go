@@ -4,11 +4,20 @@ import(
     "fmt"  
     "os"  
     "net"
-    // "bufio"
-    // "strings"
+    "bufio"
+   // "strings"
     "os/exec" 
     "bytes"
+    "encoding/json"
 )
+
+type Message struct{ 
+    UserName string
+    Address string
+    Text string
+    TimeStamp string
+}
+
 
 // a map to store the memberships in the chatroom
 func main() {
@@ -17,7 +26,12 @@ func main() {
     // To get the name, port and num of people from input
     name := os.Args[1]
     port := os.Args[2]
-    // numMem := os.Args[3]
+    localHost,err := os.Hostname()
+    if err != nil {
+        panic(err)
+    }
+    address := getdns(localHost)+ ":" + port
+    // numMem := os.Args[3]w
     // To initialize the dns array of all the vm
     hosts := []string{"sp19-cs425-g08-01.cs.illinois.edu", "sp19-cs425-g08-02.cs.illinois.edu", "sp19-cs425-g08-03.cs.illinois.edu", "sp19-cs425-g08-04.cs.illinois.edu", "sp19-cs425-g08-05.cs.illinois.edu", "sp19-cs425-g08-06.cs.illinois.edu", "sp19-cs425-g08-07.cs.illinois.edu", "sp19-cs425-g08-08.cs.illinois.edu", "sp19-cs425-g08-09.cs.illinois.edu", "sp19-cs425-g08-10.cs.illinois.edu"}
     targets := make([]string, len(hosts))
@@ -39,12 +53,20 @@ func main() {
         go func(conn net.Conn) {
             defer conn.Close()
             for {
-                buff := make([]byte, 256)
-                length, err := conn.Read(buff)
-                if err != nil {
-                    break
+                inBuf:=make([]byte,10000)
+                size,err:=conn.Read(inBuf)
+                if err!=nil{
+                    fmt.Println("Read Error:",err.Error());
+                    return
                 }
-                inMsg <- string(buff[:length])
+                //fmt.Println("data from client:",string(buf),"size:",size)                                                                                                      
+                var chatMsg Message
+                err=json.Unmarshal(inBuf[:size],&chatMsg)
+                if err!=nil{
+                    fmt.Println("Unmarshal Error:",err.Error());
+                    return
+                }
+                fmt.Println(chatMsg.UserName+":"+chatMsg.Text)
             }
         } (conn)
     }
@@ -56,43 +78,23 @@ func main() {
             select {
             case hmsg = <- inMsg :
                 fmt.Println(hmsg)
+
             default:
             }
         }
         }()
     
-    // begin sending message
-    // messageChan := make(chan []string)
-    // return the machines that are alive
-    // for _,target := range targets {
-    //     fmt.Println(target)
-    // }
-    // var suc []string
     memMap := make(map[string]bool)
+    //memInfo := make(map[string]string) //key: host, value:name
     go func(){
         for{
             checkConnectAll(targets, name, memMap)
         }
     }()
 
-    // go func() {
-    //     for{
-    //         if(len(suc) >= 1){
-    //             fmt.Println(suc[0])
-    //         }
-    //     }
-    // }()
-    // deal with the failures
-    
-    // memChan := make(chan []string)
-    // checkItem(suc, memMap, memChan)
-    // leaves := <-memChan
-    // for leave := range leaves {
-    //     fmt.Println(leave + " has left")
-    // }
-    
     outMsg := make(chan string, 3)
     var msg string
+    outInit := make(chan string,1)
 
     // multicast the messages
     go func() {
@@ -100,9 +102,19 @@ func main() {
             select {
             case msg = <- outMsg:
                 for item, _ := range memMap {
-                	// face, _ := net.InterfaceAddrs()
-                    if(len(item) > 0 && item != targets[0]){
-                        // fmt.Println(item)
+                    if(len(item) > 0 && item != address){
+                        conn, err := net.Dial("tcp", item)
+                        // handle the error 
+                        if err != nil {
+                            fmt.Println("checkConnect error")
+                            os.Exit(1)
+                        }
+                        conn.Write([]byte(msg))
+                    }
+                }
+            case msg = <- outInit:
+                for item, _ := range memMap {
+                    if(len(item) > 0 && item != address){
                         conn, err := net.Dial("tcp", item)
                         // handle the error 
                         if err != nil {
@@ -113,17 +125,23 @@ func main() {
                     }
                 }
             default:
-            }
-
-            
+            }   
         }
     }()
 
     for {
-        var newMsg string
-        // fmt.Printf("%s: ", name)
-        fmt.Scan(&newMsg)
-        outMsg <- name + ": " + newMsg
+        var chatText string
+        scanner := bufio.NewScanner(os.Stdin)
+        if scanner.Scan() {
+             chatText = scanner.Text()
+        }
+        outMsg := &Message{UserName:os.Args[1],Address:address,Text:chatText,TimeStamp:""}
+
+        b,err := json.Marshal(outMsg)
+        if err != nil {
+            fmt.Println("encoding faild")
+        }
+        outInit <- string(b)
     }
 }
 
@@ -132,25 +150,6 @@ func setupServer(port string) net.Listener {
     errHandler(err, "Can not start server!", true)
     return server
 }
-
-// func listener(server net.Listener, msgChan chan string){
-//     for { 
-//         conn, err := server.Accept()
-//         // fmt.Println("hi")
-//         errHandler(err, "Can not open connection!", true)
-//         go func(conn net.Conn) {
-//             defer conn.Close()
-//             for {
-//                 buff := make([]byte, 256)
-//                 length, err := conn.Read(buff)
-//                 if err != nil {
-//                     break
-//                 }
-//                 msgChan <- string(buff[:length])
-//             }
-//         } (conn)
-//     }
-// }
 
 
 func checkConnectAll(targets []string, name string, memMap map[string]bool) {
