@@ -48,3 +48,13 @@ func main() {
     va := <-messageChan
     fmt.Println(va[0])
 }
+
+// handle the error message and print to the terminal
+func errHandler(err error, message string, exit bool) {
+    if err != nil {
+        fmt.Println(message)
+        if exit {
+            os.Exit(1)
+        }
+    }
+}

@@ -9,6 +9,7 @@ import(
     "os/exec" 
     "bytes"
     "encoding/json"
+    "strconv"
 )
 
 type Message struct{ 
@@ -26,11 +27,13 @@ func main() {
     // To get the name, port and num of people from input
     name := os.Args[1]
     port := os.Args[2]
+    numMem, _ := strconv.Atoi(os.Args[3])
     localHost,err := os.Hostname()
     if err != nil {
         panic(err)
     }
     address := getdns(localHost)+ ":" + port
+    memMap := make(map[string]string)
     // numMem := os.Args[3]w
     // To initialize the dns array of all the vm
     hosts := []string{"sp19-cs425-g08-01.cs.illinois.edu", "sp19-cs425-g08-02.cs.illinois.edu", "sp19-cs425-g08-03.cs.illinois.edu", "sp19-cs425-g08-04.cs.illinois.edu", "sp19-cs425-g08-05.cs.illinois.edu", "sp19-cs425-g08-06.cs.illinois.edu", "sp19-cs425-g08-07.cs.illinois.edu", "sp19-cs425-g08-08.cs.illinois.edu", "sp19-cs425-g08-09.cs.illinois.edu", "sp19-cs425-g08-10.cs.illinois.edu"}
@@ -48,25 +51,34 @@ func main() {
     go func() {
         for {
         conn, err := server.Accept()
-        errHandler(err, "Can not open connection!", true)
+        // errHandler(err, "Can not open connection!", true)
+        if err != nil {
+            return
+        }
         // fmt.Println("成功连接，开始读取")
         go func(conn net.Conn) {
             defer conn.Close()
             for {
-                inBuf:=make([]byte,10000)
-                size,err:=conn.Read(inBuf)
-                if err!=nil{
-                    fmt.Println("Read Error:",err.Error());
+                inBuf := make([]byte, 512)
+                size, err:=conn.Read(inBuf)
+                if err != nil{
+                    // fmt.Println("Read Error:",err.Error());
                     return
                 }
                 //fmt.Println("data from client:",string(buf),"size:",size)                                                                                                      
                 var chatMsg Message
-                err=json.Unmarshal(inBuf[:size],&chatMsg)
+                err = json.Unmarshal(inBuf[:size], &chatMsg)
                 if err!=nil{
-                    fmt.Println("Unmarshal Error:",err.Error());
+                    fmt.Println("Unmarshal Error:", err.Error());
                     return
                 }
-                fmt.Println(chatMsg.UserName+":"+chatMsg.Text)
+                _, ok := memMap[chatMsg.Address]
+                if(ok == false || memMap[chatMsg.Address] == "not") {
+                    memMap[chatMsg.Address] = chatMsg.UserName
+                }
+                if(len(chatMsg.Text) != 0){
+                    fmt.Println(chatMsg.UserName + ":" + chatMsg.Text)
+                }
             }
         } (conn)
     }
@@ -84,7 +96,7 @@ func main() {
         }
         }()
     
-    memMap := make(map[string]bool)
+    
     //memInfo := make(map[string]string) //key: host, value:name
     go func(){
         for{
@@ -92,26 +104,15 @@ func main() {
         }
     }()
 
-    outMsg := make(chan string, 3)
-    var msg string
-    outInit := make(chan string,1)
+    // outMsg := make(chan []byte, 3)
+    var msg []byte
+    outInit := make(chan []byte)
 
     // multicast the messages
     go func() {
         for{ 
             select {
-            case msg = <- outMsg:
-                for item, _ := range memMap {
-                    if(len(item) > 0 && item != address){
-                        conn, err := net.Dial("tcp", item)
-                        // handle the error 
-                        if err != nil {
-                            fmt.Println("checkConnect error")
-                            os.Exit(1)
-                        }
-                        conn.Write([]byte(msg))
-                    }
-                }
+           
             case msg = <- outInit:
                 for item, _ := range memMap {
                     if(len(item) > 0 && item != address){
@@ -121,7 +122,7 @@ func main() {
                             fmt.Println("checkConnect error")
                             os.Exit(1)
                         }
-                        conn.Write([]byte(msg))
+                        conn.Write(msg)
                     }
                 }
             default:
@@ -129,20 +130,44 @@ func main() {
         }
     }()
 
-    for {
-        var chatText string
-        scanner := bufio.NewScanner(os.Stdin)
-        if scanner.Scan() {
-             chatText = scanner.Text()
-        }
-        outMsg := &Message{UserName:os.Args[1],Address:address,Text:chatText,TimeStamp:""}
 
-        b,err := json.Marshal(outMsg)
-        if err != nil {
-            fmt.Println("encoding faild")
+    ready := 0
+    for {
+        if(ready == 0) {
+            for {
+                var chatText string
+
+                outMsg := &Message{UserName:name, Address:address, Text:chatText, TimeStamp:""}
+                b, err := json.Marshal(outMsg)
+                if err != nil {
+                    fmt.Println("encoding faild")
+                }
+                outInit <- b
+                if(len(memMap) ==  numMem){
+                    ready = 1
+                    fmt.Println("READY")
+                    break
+                }
+            }
+        } else {
+            for {
+                var chatText string
+            
+                scanner := bufio.NewScanner(os.Stdin)
+                if scanner.Scan() {
+                     chatText = scanner.Text()
+                }
+                outMsg := &Message{UserName:name, Address:address, Text:chatText, TimeStamp:""}
+                b, err := json.Marshal(outMsg)
+                if err != nil {
+                    fmt.Println("encoding faild")
+                }
+                outInit <- b
+            }
         }
-        outInit <- string(b)
     }
+
+    
 }
 
 func setupServer(port string) net.Listener {
@@ -152,7 +177,7 @@ func setupServer(port string) net.Listener {
 }
 
 
-func checkConnectAll(targets []string, name string, memMap map[string]bool) {
+func checkConnectAll(targets []string, name string, memMap map[string]string) {
         // var results []string
         for _, target := range targets {
             // fmt.Println("hi")
@@ -161,7 +186,7 @@ func checkConnectAll(targets []string, name string, memMap map[string]bool) {
 }
 
 // TODO add timestamps
-func checkConnect(target string, name string, memMap map[string]bool) {
+func checkConnect(target string, name string, memMap map[string]string) {
             // fmt.Println("hi")
             // results := make([]string, 0)
             // results[0] = name
@@ -171,14 +196,14 @@ func checkConnect(target string, name string, memMap map[string]bool) {
             if err != nil {
                 _, ok := memMap[target]
                 if(ok == true) {
+                    fmt.Println(memMap[target] + " has left")
                     delete(memMap, target)
-                    fmt.Println(target + " has left")
                 }
                 return
             }
             _, ok := memMap[target]
             if ok == false {
-                memMap[target] = true;
+                memMap[target] = "not";
             }
 
 }

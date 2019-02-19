@@ -18,6 +18,7 @@ func main(){
     
     for {
         conn, err := server.Accept()
+        fmt.Println("hi")
         errHandler(err, "Can not open connection!", true)
         go func(conn net.Conn) {
             defer conn.Close()
