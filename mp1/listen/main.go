@@ -14,9 +14,10 @@ import(
 
 type Message struct{ 
     UserName string
+    // Host string
     Address string
     Text string
-    TimeStamp string
+    TimeStamp map[string]int
 }
 
 
@@ -29,11 +30,17 @@ func main() {
     port := os.Args[2]
     numMem, _ := strconv.Atoi(os.Args[3])
     localHost,err := os.Hostname()
+
     if err != nil {
         panic(err)
     }
     address := getdns(localHost)+ ":" + port
+    // localId := getId(localHost)
+    // fmt.Print
     memMap := make(map[string]string)
+    // addressHostMap := make(map[string]string)
+    localTimeStamp := make(map[string]int)
+    localTimeStamp[address] = 0
     // numMem := os.Args[3]w
     // To initialize the dns array of all the vm
     hosts := []string{"sp19-cs425-g08-01.cs.illinois.edu", "sp19-cs425-g08-02.cs.illinois.edu", "sp19-cs425-g08-03.cs.illinois.edu", "sp19-cs425-g08-04.cs.illinois.edu", "sp19-cs425-g08-05.cs.illinois.edu", "sp19-cs425-g08-06.cs.illinois.edu", "sp19-cs425-g08-07.cs.illinois.edu", "sp19-cs425-g08-08.cs.illinois.edu", "sp19-cs425-g08-09.cs.illinois.edu", "sp19-cs425-g08-10.cs.illinois.edu"}
@@ -42,9 +49,8 @@ func main() {
         result := getdns(host)
         targets[i] = result + ":" + port
     }
-    server := setupServer(port)
 
-    
+    server := setupServer(port)
 
     // listen and print to the prompt 
     inMsg := make(chan string)
@@ -75,9 +81,24 @@ func main() {
                 _, ok := memMap[chatMsg.Address]
                 if(ok == false || memMap[chatMsg.Address] == "not") {
                     memMap[chatMsg.Address] = chatMsg.UserName
+                    _, timeOk := localTimeStamp[chatMsg.Address]
+                    if(timeOk==false){
+                        localTimeStamp[chatMsg.Address] = 0
+                    }
                 }
                 if(len(chatMsg.Text) != 0){
-                    fmt.Println(chatMsg.UserName + ":" + chatMsg.Text)
+                    for{
+                        var toDeliver = checkDeliver(chatMsg,localTimeStamp,memMap)
+                        fmt.Println("toDeliver",toDeliver)
+                        fmt.Println("chatMsg.Timestamp:",chatMsg.TimeStamp)
+                        fmt.Println("localTimeStamp before deliver:",localTimeStamp)
+                        if toDeliver == true{
+                            fmt.Println(chatMsg.UserName + ":" + chatMsg.Text+"("+")")
+                            localTimeStamp[chatMsg.Address] = localTimeStamp[chatMsg.Address]+1
+                            fmt.Println("localTimeStamp after deliver:",localTimeStamp)
+                            break
+                        }
+                    }
                 }
             }
         } (conn)
@@ -137,7 +158,7 @@ func main() {
             for {
                 var chatText string
 
-                outMsg := &Message{UserName:name, Address:address, Text:chatText, TimeStamp:""}
+                outMsg := &Message{UserName:name, Address:address, Text:chatText}
                 b, err := json.Marshal(outMsg)
                 if err != nil {
                     fmt.Println("encoding faild")
@@ -157,7 +178,10 @@ func main() {
                 if scanner.Scan() {
                      chatText = scanner.Text()
                 }
-                outMsg := &Message{UserName:name, Address:address, Text:chatText, TimeStamp:""}
+                // msgTimeStamp:= make([]int,len(localTimeStamp))
+                // copy(msgTimeStamp,localTimeStamp)
+                localTimeStamp[address] = localTimeStamp[address] + 1
+                outMsg := &Message{UserName:name, Address:address, Text:chatText,TimeStamp:localTimeStamp}
                 b, err := json.Marshal(outMsg)
                 if err != nil {
                     fmt.Println("encoding faild")
@@ -168,6 +192,29 @@ func main() {
     }
 
     
+}
+
+// func getId(host string)int{
+//     fmt.Println("Test,host:",host)
+//     id,_ := strconv.Atoi(host[15:17])
+//     return id - 1
+// }
+
+func checkDeliver(chatMsg Message,localTimeStamp map[string]int,memMap map[string]string)bool{
+    var toDeliver bool = true
+    fromAddress := chatMsg.Address
+    if localTimeStamp[fromAddress]+1<chatMsg.TimeStamp[fromAddress]{
+        toDeliver = false
+    }
+    for k:=range localTimeStamp{
+        if(k == fromAddress){
+            continue
+        }
+        if chatMsg.TimeStamp[k]>localTimeStamp[k]{
+            toDeliver = false
+        }     
+    }
+    return toDeliver
 }
 
 func setupServer(port string) net.Listener {
@@ -207,7 +254,6 @@ func checkConnect(target string, name string, memMap map[string]string) {
             }
 
 }
-
 
 // Get DNS of the host
 func getdns(vm string) string{
