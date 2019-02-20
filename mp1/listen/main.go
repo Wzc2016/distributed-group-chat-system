@@ -12,6 +12,8 @@ import(
     "strconv"
 )
 
+type timeStamp map[string]int
+
 type Message struct{ 
     UserName string
     // Host string
@@ -19,7 +21,6 @@ type Message struct{
     Text string
     TimeStamp map[string]int
 }
-
 
 // a map to store the memberships in the chatroom
 func main() {
@@ -30,7 +31,7 @@ func main() {
     port := os.Args[2]
     numMem, _ := strconv.Atoi(os.Args[3])
     localHost,err := os.Hostname()
-
+    receivedMsg := make([]timeStamp,0)
     if err != nil {
         panic(err)
     }
@@ -88,6 +89,10 @@ func main() {
                 }
                 if(len(chatMsg.Text) != 0){
                     for{
+                    	_, received := receivedMsg[chatMsg.TimeStamp]
+                    	if(received==false){
+                        	receivedMsg[chatMsg.TimeStamp] = true
+                    	}
                         var toDeliver = checkDeliver(chatMsg,localTimeStamp,memMap)
                         fmt.Println("toDeliver",toDeliver)
                         fmt.Println("chatMsg.Timestamp:",chatMsg.TimeStamp)
@@ -141,6 +146,7 @@ func main() {
                         // handle the error 
                         if err != nil {
                             fmt.Println("checkConnect error")
+                            fmt.Println("len of memmap",len(memMap))
                             os.Exit(1)
                         }
                         conn.Write(msg)
