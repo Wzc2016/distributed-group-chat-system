@@ -12,7 +12,7 @@ The document is available [here](https://courses.engr.illinois.edu/ece428/sp2019
 
 Below is a sample run of the program:
 
-<pre><samp>$ ./mp1 Alice 4444 3
+<pre><samp>$ ./main Alice 4444 3
 READY
 <kbd>Hi everyone!</kbd>
 Bob: Hi Alice!
