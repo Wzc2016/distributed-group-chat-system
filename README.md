@@ -4,7 +4,7 @@ This is a course project of CS425 in UIUC.
 
 The document is available [here](https://courses.engr.illinois.edu/ece428/sp2019/mps/mp1.html)
 
-## install and run 
+## Install and run 
 
 	go build main.go
 
@@ -24,3 +24,7 @@ Bob has left
 You may **NOT** run this program on your own machine. You can only run this program on our VMs. 
 
 **OR** you can modify the `hosts` to be a list of your own machines's hostnames.
+
+## Report
+
+You can view the design of the system in report.pdf.
