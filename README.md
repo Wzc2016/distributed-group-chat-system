@@ -27,4 +27,4 @@ You may **NOT** run this program on your own machine. You can only run this prog
 
 ## Report
 
-You can view the design of the system in report.pdf.
+You can view the design of the system in [report.pdf](https://blog.tsugumi.pro/pdf/report.pdf).
